@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dés d'Ivoire Ancien</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0d0a07;
+            --bg-warm: #1a130c;
+            --gold: #c9a84c;
+            --gold-light: #e8d5a0;
+            --ivory: #f0e4ce;
+            --text: #e8dcc8;
+            --text-muted: #8a7a64;
+            --wood-dark: #2a1a0c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Cormorant Garamond', serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Vignette atmosphérique */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(8,5,2,0.6) 100%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+        }
+
+        /* Interface superposée */
+        .ui-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        /* En-tête */
+        .header {
+            text-align: center;
+            opacity: 0;
+            animation: fadeSlideDown 1.2s ease 0.3s forwards;
+        }
+
+        @keyframes fadeSlideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header h1 {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: clamp(1.4rem, 3.5vw, 2.4rem);
+            color: var(--gold-light);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            text-shadow: 0 2px 15px rgba(201,168,76,0.25);
+            line-height: 1.3;
+        }
+
+        .header .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 0.3rem;
+            letter-spacing: 0.08em;
+        }
+
+        .header .ornament {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-top: 0.6rem;
+        }
+
+        .header .ornament .line {
+            width: 50px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .header .ornament .diamond {
+            width: 6px;
+            height: 6px;
+            background: var(--gold);
+            transform: rotate(45deg);
+            opacity: 0.7;
+        }
+
+        /* Zone des résultats */
+        .results-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
+            opacity: 0;
+            animation: fadeSlideUp 1.2s ease 0.5s forwards;
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dice-values {
+            display: flex;
+            gap: 1.2rem;
+        }
+
+        .dice-value {
+            width: 56px;
+            height: 56px;
+            border-radius: 10px;
+            background: linear-gradient(145deg, rgba(26,19,12,0.9), rgba(42,26,12,0.95));
+            border: 1.5px solid rgba(201,168,76,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Cinzel', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--gold-light);
+            text-shadow: 0 0 10px rgba(201,168,76,0.3);
+            transition: all 0.4s ease;
+        }
+
+        .dice-value.rolling {
+            animation: diceValuePulse 0.15s ease infinite alternate;
+            border-color: rgba(201,168,76,0.7);
+        }
+
+        @keyframes diceValuePulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.08); }
+        }
+
+        .total-display {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            letter-spacing: 0.15em;
+            transition: all 0.4s ease;
+        }
+
+        .total-display span {
+            color: var(--gold-light);
+            font-weight: 700;
+            font-size: 1.4rem;
+        }
+
+        /* Bouton de lancer */
+        .roll-btn {
+            pointer-events: all;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--gold-light);
+            background: linear-gradient(145deg, rgba(42,26,12,0.95), rgba(26,19,12,0.98));
+            border: 1.5px solid rgba(201,168,76,0.5);
+            padding: 0.85rem 2.8rem;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.35s ease;
+            box-shadow:
+                0 4px 20px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(201,168,76,0.15);
+            margin-top: 0.3rem;
+        }
+
+        .roll-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg, rgba(201,168,76,0.1), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        .roll-btn:hover {
+            border-color: rgba(201,168,76,0.8);
+            box-shadow:
+                0 4px 30px rgba(201,168,76,0.15),
+                0 4px 20px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(201,168,76,0.25);
+            transform: translateY(-1px);
+        }
+
+        .roll-btn:hover::before { opacity: 1; }
+
+        .roll-btn:active {
+            transform: translateY(1px);
+            box-shadow:
+                0 2px 10px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(201,168,76,0.1);
+        }
+
+        .roll-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .roll-btn:disabled:hover {
+            border-color: rgba(201,168,76,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .roll-btn .btn-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .roll-btn .btn-content i {
+            font-size: 0.85rem;
+            transition: transform 0.3s ease;
+        }
+
+        .roll-btn:hover .btn-content i {
+            transform: rotate(15deg);
+        }
+
+        /* Indication clavier */
+        .hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            opacity: 0.6;
+            letter-spacing: 0.05em;
+        }
+
+        .hint kbd {
+            display: inline-block;
+            background: rgba(201,168,76,0.1);
+            border: 1px solid rgba(201,168,76,0.25);
+            border-radius: 3px;
+            padding: 0.1rem 0.45rem;
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            color: var(--gold);
+        }
+
+        /* Historique */
+        .history {
+            position: fixed;
+            right: 1.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            align-items: flex-end;
+            opacity: 0;
+            animation: fadeIn 1s ease 1s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .history-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.3rem;
+            opacity: 0.6;
+        }
+
+        .history-entry {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            opacity: 0;
+            transform: translateX(15px);
+            animation: historySlideIn 0.4s ease forwards;
+        }
+
+        @keyframes historySlideIn {
+            to { opacity: 0.6; transform: translateX(0); }
+        }
+
+        .history-entry .h-dice {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            color: var(--gold);
+            opacity: 0.7;
+        }
+
+        .history-entry .h-total {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--gold-light);
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .history { display: none; }
+            .dice-values { gap: 0.8rem; }
+            .dice-value { width: 48px; height: 48px; font-size: 1.3rem; }
+            .roll-btn { padding: 0.75rem 2rem; font-size: 0.9rem; }
+        }
+
+        /* Réduction de mouvement */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="ui-overlay">
+        <header class="header">
+            <h1>D&eacute;s d'Ivoire</h1>
+            <p class="subtitle">Trois d&eacute;s d'&eacute;poque, l'art du hasard</p>
+            <div class="ornament">
+                <span class="line"></span>
+                <span class="diamond"></span>
+                <span class="line"></span>
+            </div>
+        </header>
+
+        <div class="results-area">
+            <div class="dice-values">
+                <div class="dice-value" id="dv0">-</div>
+                <div class="dice-value" id="dv1">-</div>
+                <div class="dice-value" id="dv2">-</div>
+            </div>
+            <div class="total-display" id="total-display">Total : <span>-</span></div>
+            <button class="roll-btn" id="roll-btn" aria-label="Lancer les dés">
+                <span class="btn-content">
+                    <i class="fas fa-dice"></i>
+                    Lancer les d&eacute;s
+                </span>
+            </button>
+            <p class="hint">ou appuyez sur <kbd>Espace</kbd></p>
+        </div>
+    </div>
+
+    <aside class="history" id="history">
+        <div class="history-title">Historique</div>
+    </aside>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ========== CONSTANTES ==========
+        const DIE_SIZE = 1;
+        const HALF = DIE_SIZE / 2;
+        const TABLE_Y = 0.0;
+        const GRAVITY = -30;
+        const RESTITUTION = 0.25;
+        const FRICTION = 0.7;
+        const WALL_MARGIN = 3.5;
+        const WALL_HEIGHT = 2.5;
+
+        // Correspondance face/valeur Three.js (normale Z+)
+        const FACE_VALUES = { px: 2, nx: 5, py: 3, ny: 4, pz: 1, nz: 6 };
+
+        // Rotations cibles par valeur (face cible vers le haut, axe Y+)
+        const TARGET_ROT = {
+            1: [Math.PI / 2, 0, 0],
+            2: [0, 0, -Math.PI / 2],
+            3: [0, 0, 0],
+            4: [Math.PI, 0, 0],
+            5: [0, 0, Math.PI / 2],
+            6: [-Math.PI / 2, 0, 0]
+        };
+
+        // ========== ÉTAT ==========
+        let isRolling = false;
+        let rollHistory = [];
+
+        // ========== SCÈNE ==========
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0d0a07);
+        scene.fog = new THREE.FogExp2(0x0d0a07, 0.035);
+
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 9, 8.5);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        container.appendChild(renderer.domElement);
+
+        // Contrôles orbitaux (vue seulement)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.minDistance = 5;
+        controls.maxDistance = 18;
+        controls.maxPolarAngle = Math.PI / 2.15;
+        controls.minPolarAngle = 0.2;
+        controls.target.set(0, 0, 0);
+        controls.enablePan = false;
+
+        // ========== ÉCLAIRAGE ==========
+        // Lumière ambiante chaude très douce
+        scene.add(new THREE.AmbientLight(0x4a3520, 0.6));
+
+        // Lumière principale (type bougie/chandelier, depuis haut-gauche)
+        const keyLight = new THREE.SpotLight(0xffd4a0, 60);
+        keyLight.position.set(-4, 12, 3);
+        keyLight.angle = Math.PI / 4;
+        keyLight.penumbra = 0.6;
+        keyLight.decay = 1.5;
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.set(2048, 2048);
+        keyLight.shadow.camera.near = 1;
+        keyLight.shadow.camera.far = 25;
+        keyLight.shadow.bias = -0.001;
+        keyLight.shadow.radius = 4;
+        scene.add(keyLight);
+        keyLight.target.position.set(0, 0, 0);
+        scene.add(keyLight.target);
+
+        // Lumière de remplissage (côté opposé, plus froide)
+        const fillLight = new THREE.PointLight(0x8899aa, 4);
+        fillLight.position.set(5, 6, -4);
+        fillLight.decay = 2;
+        scene.add(fillLight);
+
+        // Lumière de contour (rims) pour détacher les dés du fond
+        const rimLight = new THREE.PointLight(0xffeedd, 3);
+        rimLight.position.set(0, 3, -7);
+        rimLight.decay = 2;
+        scene.add(rimLight);
+
+        // Petite lueur par en bas (réflexion sur la table)
+        const bounceLight = new THREE.PointLight(0x664422, 2);
+        bounceLight.position.set(0, -0.5, 0);
+        bounceLight.decay = 2;
+        scene.add(bounceLight);
+
+        // ========== PROCÉDURE IVORE ==========
+        function createIvoryTexture(seed) {
+            const S = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = S;
+            canvas.height = S;
+            const ctx = canvas.getContext('2d');
+
+            // Base ivoire chaude
+            ctx.fillStyle = '#f0e4ce';
+            ctx.fillRect(0, 0, S, S);
+
+            // Variation de base subtile
+            const baseGrad = ctx.createRadialGradient(S * 0.4, S * 0.35, 0, S * 0.5, S * 0.5, S * 0.7);
+            baseGrad.addColorStop(0, 'rgba(248,240,225,0.4)');
+            baseGrad.addColorStop(0.5, 'rgba(235,222,198,0.2)');
+            baseGrad.addColorStop(1, 'rgba(210,192,165,0.35)');
+            ctx.fillStyle = baseGrad;
+            ctx.fillRect(0, 0, S, S);
+
+            // Grain fin de l'ivoire
+            const rng = mulberry32(seed);
+            for (let i = 0; i < 3000; i++) {
+                const x = rng() * S;
+                const y = rng() * S;
+                const s = rng() * 3 + 0.5;
+                const b = Math.floor(190 + rng() * 50);
+                ctx.fillStyle = `rgba(${b},${b - 15},${b - 35},${rng() * 0.06})`;
+                ctx.fillRect(x, y, s, s);
+            }
+
+            // Lignes de Schreger (caractéristique de l'ivoire)
+            ctx.strokeStyle = 'rgba(195,180,155,0.07)';
+            ctx.lineWidth = 0.8;
+            for (let i = 0; i < 12; i++) {
+                ctx.beginPath();
+                const sx = rng() * S;
+                const sy = rng() * S;
+                ctx.moveTo(sx, sy);
+                for (let j = 0; j < 6; j++) {
+                    ctx.lineTo(sx + (rng() - 0.5) * 200, sy + (rng() - 0.5) * 200);
+                }
+                ctx.stroke();
+            }
+
+            // Taches de vieillesse
+            for (let i = 0; i < 8; i++) {
+                const x = rng() * S;
+                const y = rng() * S;
+                const r = rng() * 35 + 8;
+                const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+                g.addColorStop(0, `rgba(175,158,130,${rng() * 0.1})`);
+                g.addColorStop(1, 'rgba(175,158,130,0)');
+                ctx.fillStyle = g;
+                ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            }
+
+            // Micro-rayures
+            ctx.strokeStyle = 'rgba(160,145,120,0.06)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < 15; i++) {
+                ctx.beginPath();
+                ctx.moveTo(rng() * S, rng() * S);
+                ctx.lineTo(rng() * S, rng() * S);
+                ctx.stroke();
+            }
+
+            // Légère patine jaune aux bords
+            const edgeGrad = ctx.createRadialGradient(S / 2, S / 2, S * 0.25, S / 2, S / 2, S * 0.72);
+            edgeGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            edgeGrad.addColorStop(1, 'rgba(140,115,65,0.1)');
+            ctx.fillStyle = edgeGrad;
+            ctx.fillRect(0, 0, S, S);
+
+            // Bordure sombre subtile (pour simuler l'arrondi du dé)
+            const borderGrad = ctx.createRadialGradient(S / 2, S / 2, S * 0.3, S / 2, S / 2, S * 0.52);
+            borderGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            borderGrad.addColorStop(1, 'rgba(80,60,30,0.12)');
+            ctx.fillStyle = borderGrad;
+            ctx.fillRect(0, 0, S, S);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+
+        // PRNG Mulberry32 (reproductible par graine)
+        function mulberry32(a) {
+            return function () {
+                a |= 0; a = a + 0x6D2B79F5 | 0;
+                let t = Math.imul(a ^ a >>> 15, 1 | a);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        }
+
+        // ========== TEXTURE DES POINTS ==========
+        function createDotsTexture() {
+            const S = 64;
+            const canvas = document.createElement('canvas');
+            canvas.width = S;
+            canvas.height = S;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, S, S);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+
+        // ========== MATÉRIAU DES DÉS ==========
+        function createDieMaterial(seed) {
+            const tex = createIvoryTexture(seed);
+            return new THREE.MeshStandardMaterial({
+                map: tex,
+                bumpMap: tex,
+                bumpScale: 0.015,
+                roughness: 0.32,
+                metalness: 0.0,
+                envMapIntensity: 0.4
+            });
+        }
+
+        // Matériau des points (creusés, sombres)
+        const dotsMaterial = new THREE.MeshStandardMaterial({
+            map: createDotsTexture(),
+            color: 0x1a1008,
+            roughness: 0.85,
+            metalness: 0.0,
+            bumpScale: 0
+        });
+
+        // ========== GÉOMÉTRIE DES POINTS ==========
+        const dotGeo = new THREE.SphereGeometry(0.075, 16, 12);
+
+        // Positions des points pour chaque valeur
+        function getDotPositions(value) {
+            const d = 0.27;
+            const c = { x: 0, y: 0, z: HALF + 0.005 };
+            const tl = { x: -d, y: d, z: HALF + 0.005 };
+            const tr = { x: d, y: d, z: HALF + 0.005 };
+            const bl = { x: -d, y: -d, z: HALF + 0.005 };
+            const br = { x: d, y: -d, z: HALF + 0.005 };
+            const ml = { x: -d, y: 0, z: HALF + 0.005 };
+            const mr = { x: d, y: 0, z: HALF + 0.005 };
+
+            const map = {
+                1: [c],
+                2: [tr, bl],
+                3: [tr, c, bl],
+                4: [tl, tr, bl, br],
+                5: [tl, tr, c, bl, br],
+                6: [tl, ml, bl, tr, mr, br]
+            };
+            return map[value] || [];
+        }
+
+        // ========== CRÉATION D'UN DÉ ==========
+        function createDie(seed) {
+            const group = new THREE.Group();
+
+            // Corps principal
+            const bodyGeo = new THREE.BoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, 2, 2, 2);
+            const body = new THREE.Mesh(bodyGeo, createDieMaterial(seed));
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
+
+            // Arrondis des arêtes (bords chanfreinés)
+            const edgeGeo = new THREE.CylinderGeometry(0.018, 0.018, DIE_SIZE, 6);
+            const edgeMat = new THREE.MeshStandardMaterial({
+                color: 0xeadbc0,
+                roughness: 0.35,
+                metalness: 0.0
+            });
+
+            for (let i = 0; i < 4; i++) {
+                const edge = new THREE.Mesh(edgeGeo, edgeMat);
+                edge.position.y = 0;
+                edge.rotation.z = Math.PI / 2;
+                edge.rotation.y = (i * Math.PI) / 2;
+                edge.position.x = Math.cos((i * Math.PI) / 2) * HALF;
+                edge.position.z = Math.sin((i * Math.PI) / 2) * HALF;
+                edge.castShadow = false;
+                group.add(edge);
+            }
+
+            // Points sur chaque face
+            const faces = [
+                { val: 1, pos: [0, 0, 1], rot: [0, 0, 0] },           // +Z → 1
+                { val: 6, pos: [0, 0, -1], rot: [0, Math.PI, 0] },     // -Z → 6
+                { val: 2, pos: [1, 0, 0], rot: [0, Math.PI / 2, 0] },  // +X → 2
+                { val: 5, pos: [-1, 0, 0], rot: [0, -Math.PI / 2, 0] },// -X → 5
+                { val: 3, pos: [0, 1, 0], rot: [-Math.PI / 2, 0, 0] }, // +Y → 3
+                { val: 4, pos: [0, -1, 0], rot: [Math.PI / 2, 0, 0] }  // -Y → 4
+            ];
+
+            faces.forEach(face => {
+                const dotPositions = getDotPositions(face.val);
+                dotPositions.forEach(dp => {
+                    const dot = new THREE.Mesh(dotGeo, dotsMaterial);
+                    dot.position.set(dp.x, dp.y, dp.z);
+                    // Tourner le groupe interne pour cette face
+                    const pivot = new THREE.Group();
+                    pivot.add(dot);
+                    pivot.rotation.set(...face.rot);
+                    // Repositionner le pivot au bon endroit
+                    const worldPos = new THREE.Vector3(...face.pos).multiplyScalar(HALF);
+                    pivot.position.copy(worldPos);
+                    group.add(pivot);
+                });
+            });
+
+            return group;
+        }
+
+        // ========== CRÉATION DES 3 DÉS ==========
+        const dice = [];
+        for (let i = 0; i < 3; i++) {
+            const die = createDie(42 + i * 137);
+            die.position.set((i - 1) * 1.8, 4 + i * 0.5, 0);
+            scene.add(die);
+            dice.push(die);
+        }
+
+        // ========== TABLE ==========
+        function createTable() {
+            const group = new THREE.Group();
+
+            // Surface principale en bois foncé
+            const surfGeo = new THREE.PlaneGeometry(10, 10, 1, 1);
+            const surfTex = createWoodTexture();
+            const surfMat = new THREE.MeshStandardMaterial({
+                map: surfTex,
+                roughness: 0.65,
+                metalness: 0.05
+            });
+            const surface = new THREE.Mesh(surfGeo, surfMat);
+            surface.rotation.x = -Math.PI / 2;
+            surface.position.y = TABLE_Y;
+            surface.receiveShadow = true;
+            group.add(surface);
+
+            // Bordure de la table (bandeau)
+            const borderHeight = 0.25;
+            const borderDepth = 0.35;
+            const borderMat = new THREE.MeshStandardMaterial({
+                color: 0x2a1a0c,
+                roughness: 0.5,
+                metalness: 0.05
+            });
+
+            const sides = [
+                { w: 10, d: borderDepth, x: 0, z: -5 - borderDepth / 2 },
+                { w: 10, d: borderDepth, x: 0, z: 5 + borderDepth / 2 },
+                { w: borderDepth, d: 10 + borderDepth * 2, x: -5 - borderDepth / 2, z: 0 },
+                { w: borderDepth, d: 10 + borderDepth * 2, x: 5 + borderDepth / 2, z: 0 }
+            ];
+
+            sides.forEach(s => {
+                const geo = new THREE.BoxGeometry(s.w, borderHeight, s.d);
+                const mesh = new THREE.Mesh(geo, borderMat);
+                mesh.position.set(s.x, TABLE_Y - borderHeight / 2, s.z);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            });
+
+            // Feutrine verte au centre (zone de lancer)
+            const feltGeo = new THREE.PlaneGeometry(5.5, 5.5);
+            const feltMat = new THREE.MeshStandardMaterial({
+                color: 0x1a3a2a,
+                roughness: 0.9,
+                metalness: 0.0
+            });
+            const felt = new THREE.Mesh(feltGeo, feltMat);
+            felt.rotation.x = -Math.PI / 2;
+            felt.position.y = TABLE_Y + 0.003;
+            felt.receiveShadow = true;
+            group.add(felt);
+
+            return group;
+        }
+
+        function createWoodTexture() {
+            const S = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = S;
+            canvas.height = S;
+            const ctx = canvas.getContext('2d');
+
+            // Base bois sombre
+            ctx.fillStyle = '#2a1a0c';
+            ctx.fillRect(0, 0, S, S);
+
+            // Fibres du bois
+            const rng = mulberry32(999);
+            for (let i = 0; i < 200; i++) {
+                const y = rng() * S;
+                const brightness = Math.floor(25 + rng() * 25);
+                ctx.strokeStyle = `rgba(${brightness + 15},${brightness},${brightness - 10},${rng() * 0.3 + 0.1})`;
+                ctx.lineWidth = rng() * 2 + 0.5;
+                ctx.beginPath();
+                let cx = 0;
+                ctx.moveTo(0, y);
+                while (cx < S) {
+                    cx += rng() * 40 + 10;
+                    ctx.lineTo(cx, y + (rng() - 0.5) * 4);
+                }
+                ctx.stroke();
+            }
+
+            // Variation de teinte
+            const grad = ctx.createLinearGradient(0, 0, S, S);
+            grad.addColorStop(0, 'rgba(50,30,15,0.3)');
+            grad.addColorStop(0.5, 'rgba(35,20,8,0.1)');
+            grad.addColorStop(1, 'rgba(60,38,18,0.25)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, S, S);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        scene.add(createTable());
+
+        // ========== ENVIRONMENT MAP (pour les reflets sur l'ivoire) ==========
+        const pmremGen = new THREE.PMREMGenerator(renderer);
+        const envScene = new THREE.Scene();
+        envScene.background = new THREE.Color(0x1a130c);
+
+        // Quelques lumières dans l'env map pour des reflets crédibles
+        const envLight1 = new THREE.PointLight(0xffd4a0, 80, 20);
+        envLight1.position.set(-3, 5, 2);
+        envScene.add(envLight1);
+        const envLight2 = new THREE.PointLight(0x8899aa, 20, 15);
+        envLight2.position.set(4, 3, -3);
+        envScene.add(envLight2);
+        const envAmbient = new THREE.AmbientLight(0x3a2815, 2);
+        envScene.add(envAmbient);
+
+        // Ajouter un mesh pour que le PMREMGenerator ait quelque chose à capturer
+        const envBox = new THREE.Mesh(
+            new THREE.BoxGeometry(20, 10, 20),
+            new THREE.MeshStandardMaterial({ color: 0x1a130c, side: THREE.BackSide })
+        );
+        envScene.add(envBox);
+
+        const envMap = pmremGen.fromScene(envScene, 0.04).texture;
+        scene.environment = envMap;
+        pmremGen.dispose();
+
+        // ========== PARTICULES DE POUSSIÈRE ==========
+        const dustCount = 120;
+        const dustGeo = new THREE.BufferGeometry();
+        const dustPos = new Float32Array(dustCount * 3);
+        const dustVel = [];
+
+        for (let i = 0; i < dustCount; i++) {
+            dustPos[i * 3] = (Math.random() - 0.5) * 8;
+            dustPos[i * 3 + 1] = Math.random() * 5 + 0.3;
+            dustPos[i * 3 + 2] = (Math.random() - 0.5) * 8;
+            dustVel.push({
+                x: (Math.random() - 0.5) * 0.08,
+                y: (Math.random() - 0.5) * 0.03,
+                z: (Math.random() - 0.5) * 0.08
+            });
+        }
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+
+        const dustMat = new THREE.PointsMaterial({
+            color: 0xffe8c0,
+            size: 0.025,
+            transparent: true,
+            opacity: 0.35,
+            sizeAttenuation: true,
+            depthWrite: false
+        });
+
+        const dustParticles = new THREE.Points(dustGeo, dustMat);
+        scene.add(dustParticles);
+
+        function updateDust() {
+            const pos = dustGeo.attributes.position.array;
+            for (let i = 0; i < dustCount; i++) {
+                pos[i * 3] += dustVel[i].x;
+                pos[i * 3 + 1] += dustVel[i].y;
+                pos[i * 3 + 2] += dustVel[i].z;
+
+                // Reboucler si trop loin
+                if (Math.abs(pos[i * 3]) > 5) dustVel[i].x *= -1;
+                if (pos[i * 3 + 1] > 5.5 || pos[i * 3 + 1] < 0.2) dustVel[i].y *= -1;
+                if (Math.abs(pos[i * 3 + 2]) > 5) dustVel[i].z *= -1;
+            }
+            dustGeo.attributes.position.needsUpdate = true;
+        }
+
+        // ========== PHYSIQUE SIMPLIFIÉE ==========
+        function simulateRoll(dieData, dt) {
+            const d = dieData;
+            d.vy += GRAVITY * dt;
+
+            d.x += d.vx * dt;
+            d.y += d.vy * dt;
+            d.z += d.vz * dt;
+
+            // Rotation
+            d.rx += d.wrx * dt;
+            d.ry += d.wry * dt;
+            d.rz += d.wrz * dt;
+
+            // Collision avec la table
+            const dieHalf = HALF;
+            if (d.y < TABLE_Y + dieHalf) {
+                d.y = TABLE_Y + dieHalf;
+                d.vy = -d.vy * RESTITUTION;
+                d.vx *= FRICTION;
+                d.vz *= FRICTION;
+                d.wrx *= 0.75;
+                d.wry *= 0.75;
+                d.wrz *= 0.75;
+
+                if (Math.abs(d.vy) < 0.3) d.vy = 0;
+            }
+
+            // Murs invisibles
+            if (d.x < -WALL_MARGIN + dieHalf) {
+                d.x = -WALL_MARGIN + dieHalf;
+                d.vx = Math.abs(d.vx) * RESTITUTION;
+                d.wry *= -0.7;
+            }
+            if (d.x > WALL_MARGIN - dieHalf) {
+                d.x = WALL_MARGIN - dieHalf;
+                d.vx = -Math.abs(d.vx) * RESTITUTION;
+                d.wry *= -0.7;
+            }
+            if (d.z < -WALL_MARGIN + dieHalf) {
+                d.z = -WALL_MARGIN + dieHalf;
+                d.vz = Math.abs(d.vz) * RESTITUTION;
+                d.wrx *= -0.7;
+            }
+            if (d.z > WALL_MARGIN - dieHalf) {
+                d.z = WALL_MARGIN - dieHalf;
+                d.vz = -Math.abs(d.vz) * RESTITUTION;
+                d.wrx *= -0.7;
+            }
+
+            // Collision simplifiée entre dés
+            for (const other of allDiceData) {
+                if (other === d) continue;
+                const dx = d.x - other.x;
+                const dy = d.y - other.y;
+                const dz = d.z - other.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                const minDist = DIE_SIZE * 1.05;
+                if (dist < minDist && dist > 0.001) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const nz = dz / dist;
+                    const overlap = minDist - dist;
+                    d.x += nx * overlap * 0.5;
+                    d.y += ny * overlap * 0.5;
+                    d.z += nz * overlap * 0.5;
+                    other.x -= nx * overlap * 0.5;
+                    other.y -= ny * overlap * 0.5;
+                    other.z -= nz * overlap * 0.5;
+
+                    // Échange de vitesse simplifié
+                    const relVx = d.vx - other.vx;
+                    const relVy = d.vy - other.vy;
+                    const relVz = d.vz - other.vz;
+                    const relDot = relVx * nx + relVy * ny + relVz * nz;
+                    if (relDot < 0) {
+                        d.vx -= relDot * nx * 0.5;
+                        d.vy -= relDot * ny * 0.5;
+                        d.vz -= relDot * nz * 0.5;
+                        other.vx += relDot * nx * 0.5;
+                        other.vy += relDot * ny * 0.5;
+                        other.vz += relDot * nz * 0.5;
+                    }
+                }
+            }
+
+            // Amortissement global
+            d.vx *= (1 - 0.5 * dt);
+            d.vz *= (1 - 0.5 * dt);
+            d.wrx *= (1 - 1.5 * dt);
+            d.wry *= (1 - 1.5 * dt);
+            d.wrz *= (1 - 1.5 * dt);
+
+            // Appliquer au mesh Three.js
+            dieData.mesh.position.set(d.x, d.y, d.z);
+            dieData.mesh.rotation.set(d.rx, d.ry, d.rz);
+
+            // Vérifier si le dé est stable
+            const speed = Math.abs(d.vx) + Math.abs(d.vy) + Math.abs(d.vz);
+            const rotSpeed = Math.abs(d.wrx) + Math.abs(d.wry) + Math.abs(d.wrz);
+            return speed < 0.05 && rotSpeed < 0.1 && d.y < TABLE_Y + dieHalf + 0.02;
+        }
+
+        // ========== LANCER LES DÉS ==========
+        let allDiceData = [];
+        let settleTimer = 0;
+        let settlePhase = false;
+        let finalValues = [0, 0, 0];
+
+        function rollDice() {
+            if (isRolling) return;
+            isRolling = true;
+            settlePhase = false;
+            settleTimer = 0;
+
+            document.getElementById('roll-btn').disabled = true;
+            for (let i = 0; i < 3; i++) {
+                document.getElementById(`dv${i}`).classList.add('rolling');
+                document.getElementById(`dv${i}`).textContent = '-';
+            }
+            document.getElementById('total-display').innerHTML = 'Total : <span>-</span>';
+
+            allDiceData = [];
+
+            for (let i = 0; i < 3; i++) {
+                // Position de départ (légèrement décalée)
+                const startX = (i - 1) * 0.6 + (Math.random() - 0.5) * 0.3;
+                const startY = 3.5 + Math.random() * 1;
+                const startZ = -2.5 + (Math.random() - 0.5) * 0.5;
+
+                // Vitesse initiale (vers l'avant avec variante)
+                const vx = (Math.random() - 0.5) * 4;
+                const vy = 1 + Math.random() * 2;
+                const vz = 3 + Math.random() * 3;
+
+                // Vitesse angulaire initiale (rotations rapides)
+                const wrx = (Math.random() - 0.5) * 20;
+                const wry = (Math.random() - 0.5) * 20;
+                const wrz = (Math.random() - 0.5) * 20;
+
+                allDiceData.push({
+                    mesh: dice[i],
+                    x: startX, y: startY, z: startZ,
+                    vx, vy, vz,
+                    rx: Math.random() * Math.PI * 2,
+                    ry: Math.random() * Math.PI * 2,
+                    rz: Math.random() * Math.PI * 2,
+                    wrx, wry, wrz,
+                    targetValue: Math.floor(Math.random() * 6) + 1,
+                    settled: false
+                });
+            }
+        }
+
+        // Fonction d'interpolation lissée (ease out)
+        function smoothstep(t) {
+            return t * t * (3 - 2 * t);
+        }
+
+        // ========== RÉSOLUTION FINALE ==========
+        function settleDice() {
+            for (let i = 0; i < 3; i++) {
+                const d = allDiceData[i];
+                const target = TARGET_ROT[d.targetValue];
+
+                // Interpoler vers la rotation cible
+                d.rx += (target[0] - d.rx) * 0.15;
+                d.ry += (target[1] - d.ry) * 0.15;
+                d.rz += (target[2] - d.rz) * 0.15;
+
+                // Ajuster Y pour être bien posé
+                d.y += (TABLE_Y + HALF - d.y) * 0.2;
+
+                d.mesh.position.set(d.x, d.y, d.z);
+                d.mesh.rotation.set(d.rx, d.ry, d.rz);
+            }
+
+            settleTimer += 0.016;
+
+            if (settleTimer > 0.8) {
+                // Finaliser
+                for (let i = 0; i < 3; i++) {
+                    const d = allDiceData[i];
+                    const target = TARGET_ROT[d.targetValue];
+                    d.mesh.rotation.set(...target);
+                    d.mesh.position.y = TABLE_Y + HALF;
+                    finalValues[i] = d.targetValue;
+                }
+
+                finishRoll();
+            }
+        }
+
+        function finishRoll() {
+            isRolling = false;
+            settlePhase = false;
+
+            // Mettre à jour l'interface
+            const total = finalValues.reduce((a, b) => a + b, 0);
+            for (let i = 0; i < 3; i++) {
+                const el = document.getElementById(`dv${i}`);
+                el.classList.remove('rolling');
+                el.textContent = finalValues[i];
+            }
+            document.getElementById('total-display').innerHTML = `Total : <span>${total}</span>`;
+            document.getElementById('roll-btn').disabled = false;
+
+            // Ajouter à l'historique
+            addHistoryEntry(finalValues, total);
+        }
+
+        function addHistoryEntry(values, total) {
+            rollHistory.unshift({ values: [...values], total });
+            if (rollHistory.length > 8) rollHistory.pop();
+
+            const historyEl = document.getElementById('history');
+            // Supprimer les anciennes entrées
+            historyEl.querySelectorAll('.history-entry').forEach(e => e.remove());
+
+            rollHistory.forEach((entry, idx) => {
+                const div = document.createElement('div');
+                div.className = 'history-entry';
+                div.style.animationDelay = `${idx * 0.05}s`;
+                div.innerHTML = `
+                    <span class="h-dice">${entry.values.join(' + ')}</span>
+                    <span class="h-total">${entry.total}</span>
+                `;
+                historyEl.appendChild(div);
+            });
+        }
+
+        // ========== ANIMATION DES VALEURS PENDANT LE LANCER ==========
+        let valueFlickerTimer = 0;
+        function flickerValues(dt) {
+            valueFlickerTimer += dt;
+            if (valueFlickerTimer > 0.08) {
+                valueFlickerTimer = 0;
+                for (let i = 0; i < 3; i++) {
+                    const el = document.getElementById(`dv${i}`);
+                    if (el.classList.contains('rolling')) {
+                        el.textContent = Math.floor(Math.random() * 6) + 1;
+                    }
+                }
+            }
+        }
+
+        // ========== BOUCLE D'ANIMATION ==========
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.05);
+
+            if (isRolling) {
+                if (!settlePhase) {
+                    // Phase physique
+                    let allSettled = true;
+                    for (const d of allDiceData) {
+                        const settled = simulateRoll(d, dt);
+                        if (!settled) allSettled = false;
+                    }
+
+                    flickerValues(dt);
+
+                    if (allSettled) {
+                        settlePhase = true;
+                        settleTimer = 0;
+                    }
+                } else {
+                    // Phase de stabilisation (snap vers les valeurs cibles)
+                    settleDice();
+                }
+            }
+
+            // Poussière
+            updateDust();
+
+            // Contrôles
+            controls.update();
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // ========== ÉVÉNEMENTS ==========
+        document.getElementById('roll-btn').addEventListener('click', rollDice);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !isRolling) {
+                e.preventDefault();
+                rollDice();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
